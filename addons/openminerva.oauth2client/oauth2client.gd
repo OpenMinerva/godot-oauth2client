@@ -24,48 +24,20 @@ var debug_mode: bool = false
 var pkce: String = _random_string()
 var http_lib: Variant = null
 
-var success_html: String = ""
-var result_page_css: String = ""
-var result_page_favicon: String = ""
+var index_html: String = ""
+var css_html: String = ""
+var favicon_html: String = ""
 
-func _init(p_host: String, p_host_port: int, p_client_id: String, p_port: int = 54000, p_logger: Variant = null, p_http_lib: Variant = null, p_is_debug: bool = false) -> void:
+func _init(p_host: String, p_host_port: int, p_client_id: String, p_port: int = 54000, p_logger: Variant = null, p_http_lib: Variant = null, p_debug_mode: bool = false) -> void:
 	host = p_host
 	host_port = p_host_port
 	client_id = p_client_id
 	port = p_port
-	logger = p_logger
-	debug_mode = p_is_debug
+	debug_mode = p_debug_mode
 
-	if p_http_lib && p_http_lib.has_method("req"):
-		lib_log("Using supplied HTTP Library.")
-		http_lib = p_http_lib
-	else:
-		lib_log("Using fallback HTTP Library.")
-		http_lib = preload("res://addons/openminerva.oauth2client/http.gd").new()
-
-	# Read the success HTML page.
-	var html = FileAccess.open("res://addons/openminerva.oauth2/page/index.html", FileAccess.READ)
-	if html:
-		var content = html.get_as_text()
-		html.close()
-		success_html = content
-
-	# CSS Page
-	var css = FileAccess.open("res://addons/openminerva.oauth2/page/index.css", FileAccess.READ)
-	if css:
-		var content = css.get_as_text()
-		css.close()
-		result_page_css = content
-
-	# Read Favicon
-	var fav_file = FileAccess.open("res://addons/openminerva.oauth2/page/logo.webp", FileAccess.READ)
-	if fav_file:
-		var buffer = fav_file.get_buffer(fav_file.get_length())
-		fav_file.close()
-
-		var base64_str = Marshalls.raw_to_base64(buffer)
-
-		result_page_favicon = "<link rel=\"icon\" href=\"data:image/webp;base64," + base64_str + "\">"
+	_setup_logger(p_logger)
+	_setup_http(p_http_lib)
+	_read_local_files()
 
 	lib_log("OAuth2 library initialized.")
 
@@ -120,7 +92,7 @@ func validate(oauth_data: Dictionary) -> bool:
 	return is_active
 
 func lib_log(p_msg: String) -> void:
-	if logger.has_method("log"):
+	if logger:
 		logger.log("[OAuth2] %s" % p_msg)
 	else:
 		print("[OAuth2] %s" % p_msg)
@@ -180,16 +152,16 @@ func _handle_auth_callback(connection: StreamPeerTCP) -> String:
 	lib_log("Got authentication code: '%s'." % (temp_auth_code if debug_mode else "[HIDDEN]"))
 
 	# Add the favicon to the page.
-	success_html = success_html.replace('<link rel="icon" type="image/svg" href="logo.svg" />', result_page_favicon)
+	index_html = index_html.replace('<link rel="icon" type="image/svg" href="logo.svg" />', favicon_html)
 
 	# Add the stylesheet to the page.
-	success_html = success_html.replace('<link rel="stylesheet" type="text/css" href="index.css">', "<style>%s</style>" % result_page_css)
+	index_html = index_html.replace('<link rel="stylesheet" type="text/css" href="index.css">', css_html)
 
 	# Send success.
 	var html_response = "HTTP/1.1 200 OK\r\n"
 	html_response += "Content-Type: text/html\r\n"
 	html_response += "Connection: close\r\n\r\n"
-	html_response += success_html
+	html_response += index_html
 	connection.put_data(html_response.to_utf8_buffer())
 
 	# Disconnect
@@ -227,3 +199,54 @@ func _get_tokens_from_response(response: Dictionary) -> Dictionary:
 	}
 
 	return oauth_data
+
+func _setup_logger(p_logger) -> void:
+	if p_logger && p_logger.has_method("log"):
+		logger = p_logger
+		lib_log("Using supplied Logger Library.")
+	else:
+		lib_log("Logger not supplied, using fallback.")
+	return
+	
+func _setup_http(p_http_lib) -> void:
+	if p_http_lib && p_http_lib.has_method("req"):
+		lib_log("Using supplied HTTP Library.")
+		http_lib = p_http_lib
+	else:
+		lib_log("Using fallback HTTP Library.")
+		http_lib = preload("res://addons/openminerva.oauth2client/http.gd").new()
+	return
+
+func _read_local_files() -> void:
+	lib_log("Reading local files.")
+
+	# Read HTML page.
+	var html = FileAccess.open("res://addons/openminerva.oauth2client/page/index.html", FileAccess.READ)
+	if html:
+		var content = html.get_as_text()
+		html.close()
+		index_html = content
+	else:
+		lib_log("Failed to read the callback page. Ensure the 'index.html' page is located in the '/openmineerva/oauth2client/page' directory.")
+
+	# Read CSS
+	var css = FileAccess.open("res://addons/openminerva.oauth2client/page/index.css", FileAccess.READ)
+	if css:
+		var content = css.get_as_text()
+		css.close()
+		css_html = "<style>%s</style>" % content
+	else:
+		lib_log("Failed to read the callback page stylesheet. Ensure that 'index.css' stylesheet is located in the '/openmineerva/oauth2client/page' directory.")
+
+	# Read Favicon.
+	var fav_file = FileAccess.open("res://addons/openminerva.oauth2client/page/logo.webp", FileAccess.READ)
+	if fav_file:
+		var buffer = fav_file.get_buffer(fav_file.get_length())
+		fav_file.close()
+
+		var base64_str = Marshalls.raw_to_base64(buffer)
+
+		favicon_html = "<link rel=\"icon\" href=\"data:image/webp;base64," + base64_str + "\">"
+	else:
+		lib_log("Failed to read the callback page favicon. Ensure that 'logo.webp' favicon is located in the '/openmineerva/oauth2client/page' directory.")
+	return
