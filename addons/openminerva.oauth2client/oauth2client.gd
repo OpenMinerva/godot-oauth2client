@@ -40,7 +40,7 @@ func _init(p_host: String, p_host_port: int, p_client_id: String, p_callback_por
 	_setup_http(p_http_lib)
 	_read_local_files()
 
-	lib_log("OAuth2 library initialized.")
+	_lib_log("OAuth2 library initialized.")
 
 func authenticate() -> Dictionary:
 	var uri_with_port: String = ":".join([host, host_port])
@@ -56,26 +56,26 @@ func authenticate() -> Dictionary:
 		"code_challenge=%s" % code_challenge,
 		"prompt=consent"
 	])
-	lib_log("Starting authentication flow for '%s'." % host)
+	_lib_log("Starting authentication flow for '%s'." % host)
 	
 	complete_uri = uri_with_port + "/oauth/authorize?" + uri_query
 
 	OS.shell_open(complete_uri)
 
 	redirect_server.listen(callback_port, LOCALHOST)
-	lib_log("Started redirect server.")
+	_lib_log("Started redirect server.")
 
 	var _auth_code = await _wait_for_auth_code()
 
 	redirect_server = TCPServer.new()
-	lib_log("Closed redirect server.")
+	_lib_log("Closed redirect server.")
 
 	var oauth_data: Dictionary = await _exchange_code(_auth_code)
 	return oauth_data
 
 func validate(oauth_data: Dictionary) -> bool:
 	if oauth_data.access_token == "":
-		lib_log("No access token provided to validate. Returning false.")
+		_lib_log("No access token provided to validate. Returning false.")
 		return false
 
 	var form_parts := [
@@ -87,7 +87,7 @@ func validate(oauth_data: Dictionary) -> bool:
 	
 	# TODO: Safe JSON checking / parsing
 	if introspect_response.ok == false:
-		lib_log("Unknown error parsing the introspection response.")
+		_lib_log("Unknown error parsing the introspection response.")
 		return false
 
 	# FIXME: No validation of JSON before parsing, causes errors!
@@ -95,7 +95,7 @@ func validate(oauth_data: Dictionary) -> bool:
 	var is_active: bool = introspect_response.active
 	return is_active
 
-func lib_log(p_msg: String) -> void:
+func _lib_log(p_msg: String) -> void:
 	if logger:
 		logger.log("[OAuth2] %s" % p_msg)
 	else:
@@ -146,14 +146,14 @@ func _wait_for_auth_code() -> String:
 	return code
 
 func _handle_auth_callback(connection: StreamPeerTCP) -> String:
-	lib_log("Formatting HTTP response.")
+	_lib_log("Formatting HTTP response.")
 	var request = connection.get_string(connection.get_available_bytes())
 
 	# Extract code from URL
 	# FIXME: Not safe auth_code extraction.
 	var temp_auth_code: String = request.split("code=")[1].split("&iss=")[0].strip_edges()
 
-	lib_log("Got authentication code: '%s'." % (temp_auth_code if debug_mode else "[HIDDEN]"))
+	_lib_log("Got authentication code: '%s'." % (temp_auth_code if debug_mode else "[HIDDEN]"))
 
 	# Add the favicon to the page.
 	index_html = index_html.replace('<link rel="icon" type="image/svg" href="logo.svg" />', favicon_html)
@@ -174,7 +174,7 @@ func _handle_auth_callback(connection: StreamPeerTCP) -> String:
 	return temp_auth_code
 
 func _exchange_code(code: String) -> Dictionary:
-	lib_log("Exchanging auth code for tokens.")
+	_lib_log("Exchanging auth code for tokens.")
 
 	var form_parts := [
 		"client_id=%s" % client_id,
@@ -193,7 +193,7 @@ func _exchange_code(code: String) -> Dictionary:
 	return formatted
 
 func _get_tokens_from_response(response: Dictionary) -> Dictionary:
-	lib_log("Formatting response tokens.")
+	_lib_log("Formatting response tokens.")
 	# TODO: Error checks to prevent overwriting with bad data.
 	var oauth_data = {
 		"access_token" = response.get("access_token"),
@@ -207,22 +207,22 @@ func _get_tokens_from_response(response: Dictionary) -> Dictionary:
 func _setup_logger(p_logger) -> void:
 	if p_logger && p_logger.has_method("log"):
 		logger = p_logger
-		lib_log("Using supplied Logger Library.")
+		_lib_log("Using supplied Logger Library.")
 	else:
-		lib_log("Logger not supplied, using fallback.")
+		_lib_log("Logger not supplied, using fallback.")
 	return
 	
 func _setup_http(p_http_lib) -> void:
 	if p_http_lib && p_http_lib.has_method("req"):
-		lib_log("Using supplied HTTP Library.")
+		_lib_log("Using supplied HTTP Library.")
 		http_lib = p_http_lib
 	else:
-		lib_log("Using fallback HTTP Library.")
+		_lib_log("Using fallback HTTP Library.")
 		http_lib = preload("res://addons/openminerva.oauth2client/http.gd").new()
 	return
 
 func _read_local_files() -> void:
-	lib_log("Reading local files.")
+	_lib_log("Reading local files.")
 
 	# Read HTML page.
 	var html = FileAccess.open("res://addons/openminerva.oauth2client/page/index.html", FileAccess.READ)
@@ -231,7 +231,7 @@ func _read_local_files() -> void:
 		html.close()
 		index_html = content
 	else:
-		lib_log("Failed to read the callback page. Ensure the 'index.html' page is located in the '/openmineerva/oauth2client/page' directory.")
+		_lib_log("Failed to read the callback page. Ensure the 'index.html' page is located in the '/openmineerva/oauth2client/page' directory.")
 
 	# Read CSS
 	var css = FileAccess.open("res://addons/openminerva.oauth2client/page/index.css", FileAccess.READ)
@@ -240,7 +240,7 @@ func _read_local_files() -> void:
 		css.close()
 		css_html = "<style>%s</style>" % content
 	else:
-		lib_log("Failed to read the callback page stylesheet. Ensure that 'index.css' stylesheet is located in the '/openmineerva/oauth2client/page' directory.")
+		_lib_log("Failed to read the callback page stylesheet. Ensure that 'index.css' stylesheet is located in the '/openmineerva/oauth2client/page' directory.")
 
 	# Read Favicon.
 	var fav_file = FileAccess.open("res://addons/openminerva.oauth2client/page/logo.webp", FileAccess.READ)
@@ -252,5 +252,5 @@ func _read_local_files() -> void:
 
 		favicon_html = "<link rel=\"icon\" href=\"data:image/webp;base64," + base64_str + "\">"
 	else:
-		lib_log("Failed to read the callback page favicon. Ensure that 'logo.webp' favicon is located in the '/openmineerva/oauth2client/page' directory.")
+		_lib_log("Failed to read the callback page favicon. Ensure that 'logo.webp' favicon is located in the '/openmineerva/oauth2client/page' directory.")
 	return
