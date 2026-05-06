@@ -84,7 +84,8 @@ func authenticate() -> Dictionary:
 		return _return_status(OAUTH2_CLIENT_RESULT.TIMEOUT)
 
 	var oauth_data: Dictionary = await _exchange_code(_auth_code)
-	return _return_status(OAUTH2_CLIENT_RESULT.OK, oauth_data)
+
+	return _return_status(oauth_data.ok, oauth_data.data)
 
 func validate(oauth_data: Dictionary) -> Dictionary:
 	var _introspect_response: Dictionary = {}
@@ -209,21 +210,29 @@ func _handle_auth_callback(connection: StreamPeerTCP) -> String:
 func _exchange_code(code: String) -> Dictionary:
 	_lib_log("Exchanging auth code for tokens.")
 
-	var form_parts := [
+	var _form: String = "&".join([
 		"client_id=%s" % client_id,
 		"grant_type=authorization_code",
 		"code=%s" % code,
 		"redirect_uri=http://%s:%s" % [LOCALHOST, callback_port],
 		"code_challenge_method=S256",
 		"code_verifier=%s" % pkce,
-	]
+	])
+	var _exchange_response: Dictionary
+	var _exchange_parsed: Dictionary
+	var _exchanged_body: String
+	var _formatted_response: Dictionary
 
-	# FIXME: No validation of JSON before parsing, causes errors!
-	var form_string: String = "&".join(form_parts)
-	var exchange_response = await http_lib.req(HTTPClient.Method.METHOD_POST, host, "/oauth/token", host_port, ["Accept: application/json", "Content-Type: application/x-www-form-urlencoded"], form_string)
-	var token_data = JSON.parse_string(exchange_response.get("body"))
-	var formatted: Dictionary = _get_tokens_from_response(token_data)
-	return formatted
+	_exchange_response = await http_lib.req(HTTPClient.Method.METHOD_POST, host, "/oauth/token", host_port, ["Accept: application/json", "Content-Type: application/x-www-form-urlencoded"], _form)
+	if _exchange_response.get("ok") == false:
+		_lib_log("Unknown error exchanging code.")
+		return _return_status(OAUTH2_CLIENT_RESULT.HTTP_REQUEST_FAILED)
+
+	_exchanged_body = _exchange_response.get("body")
+	_exchange_parsed = JSON.parse_string(_exchanged_body)
+	_formatted_response = _get_tokens_from_response(_exchange_parsed)
+
+	return _return_status(OAUTH2_CLIENT_RESULT.OK, _formatted_response)
 
 func _get_tokens_from_response(response: Dictionary) -> Dictionary:
 	_lib_log("Formatting response tokens.")
