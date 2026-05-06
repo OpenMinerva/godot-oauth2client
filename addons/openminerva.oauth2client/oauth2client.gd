@@ -34,7 +34,8 @@ enum OAUTH2_CLIENT_RESULT {
 	OK = 0,
 	UNKNOWN_ERROR = 1,
 	HTTP_REQUEST_FAILED = 2,
-	MISSING_REQUIRED_PARAM = 3
+	MISSING_REQUIRED_PARAM = 3,
+	JSON_PARSE_FAILED = 4
 }
 
 func _init(p_host: String, p_host_port: int, p_client_id: String, p_callback_port: int = 54000, p_logger: Variant = null, p_http_lib: Variant = null, p_debug_mode: bool = false) -> void:
@@ -83,28 +84,32 @@ func authenticate() -> Dictionary:
 	return _return_status(OAUTH2_CLIENT_RESULT.OK, oauth_data)
 
 func validate(oauth_data: Dictionary) -> Dictionary:
-	var form: String = ""
-	var introspect_response: Dictionary = {}
+	var _introspect_response: Dictionary = {}
+	var _introspect_body: String = ""
+	var _introspect_parsed_body: Dictionary = {}
+	var _oauth_token_active: bool = false
+	var form: String = "&".join([
+		"client_id=%s" % client_id,
+		"token=%s" % oauth_data.access_token,
+	])
 
 	if oauth_data.access_token == "":
 		_lib_log("No access token provided to validate. Returning false.")
 		return _return_status(OAUTH2_CLIENT_RESULT.OK, false)
 
-	form = "&".join([
-		"client_id=%s" % client_id,
-		"token=%s" % oauth_data.access_token,
-	])
-	introspect_response = await http_lib.req(HTTPClient.Method.METHOD_POST, host, "/oauth/token/introspection", host_port, ["Accept: application/json", "Content-Type: application/x-www-form-urlencoded"], form)
-	
-	# TODO: Safe JSON checking / parsing
-	if introspect_response.ok == false:
+	_introspect_response = await http_lib.req(HTTPClient.Method.METHOD_POST, host, "/oauth/token/introspection", host_port, ["Accept: application/json", "Content-Type: application/x-www-form-urlencoded"], form)
+	if _introspect_response.ok == false:
 		_lib_log("Unknown error parsing the introspection response.")
 		return _return_status(OAUTH2_CLIENT_RESULT.HTTP_REQUEST_FAILED)
 
-	# FIXME: No validation of JSON before parsing, causes errors!
-	introspect_response = JSON.parse_string(introspect_response.body)
-	var is_active: bool = introspect_response.active
-	return _return_status(OAUTH2_CLIENT_RESULT.OK, is_active)
+	_introspect_body = _introspect_response.get("body")
+	_introspect_parsed_body = JSON.parse_string(_introspect_body)
+
+	if _introspect_parsed_body == null:
+		return _return_status(OAUTH2_CLIENT_RESULT.JSON_PARSE_FAILED)
+
+	_oauth_token_active = _introspect_parsed_body.active
+	return _return_status(OAUTH2_CLIENT_RESULT.OK, _oauth_token_active)
 
 func _lib_log(p_msg: String) -> void:
 	if logger:
