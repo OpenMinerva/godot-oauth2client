@@ -1,6 +1,6 @@
 # --- License
-# File: /oauth2.gd
-# Project: openminerva.oauth2
+# File: /oauth2client.gd
+# Project: openminerva.oauth2client
 # Created Date: 04 May 2026
 # Copyright (c) 2026 OpenMinerva
 # License: MIT License
@@ -41,7 +41,7 @@ func _init(p_host: String, p_host_port: int, p_client_id: String, p_port: int = 
 		http_lib = p_http_lib
 	else:
 		lib_log("Using fallback HTTP Library.")
-		http_lib = preload("res://addons/openminerva.oauth2/http.gd").new()
+		http_lib = preload("res://addons/openminerva.oauth2client/http.gd").new()
 
 	# Read the success HTML page.
 	var html = FileAccess.open("res://addons/openminerva.oauth2/page/index.html", FileAccess.READ)

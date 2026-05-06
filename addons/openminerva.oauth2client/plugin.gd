@@ -11,7 +11,7 @@
 extends EditorPlugin
 
 const AUTOLOAD_NAME = "OAuth2Client"
-const SCRIPT_PATH = "res://addons/openminerva.oauth2/wrapper.gd"
+const SCRIPT_PATH = "res://addons/openminerva.oauth2client/wrapper.gd"
 
 func _enter_tree():
 	add_autoload_singleton(AUTOLOAD_NAME, SCRIPT_PATH)

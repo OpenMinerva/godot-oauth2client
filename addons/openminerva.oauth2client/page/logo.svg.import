@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://petqhrvijhpi"
-path="res://.godot/imported/logo.svg-0695cc87fb8ea94a99dbb803b2ac1323.ctex"
+path="res://.godot/imported/logo.svg-fa70b508e936bdef6c3d0d5806e2dfdf.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://addons/openminerva.oauth2/page/logo.svg"
-dest_files=["res://.godot/imported/logo.svg-0695cc87fb8ea94a99dbb803b2ac1323.ctex"]
+source_file="res://addons/openminerva.oauth2client/page/logo.svg"
+dest_files=["res://.godot/imported/logo.svg-fa70b508e936bdef6c3d0d5806e2dfdf.ctex"]
 
 [params]
 
