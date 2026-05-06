@@ -19,7 +19,7 @@ var host_port: int = 0
 var client_id: String = ""
 var port: int = 0
 var logger: Variant = null
-var redirect_server = TCPServer.new()
+var redirect_server: TCPServer = TCPServer.new()
 var debug_mode: bool = false
 var pkce: String = _random_string()
 var http_lib: Variant = null
@@ -42,21 +42,24 @@ func _init(p_host: String, p_host_port: int, p_client_id: String, p_port: int = 
 	lib_log("OAuth2 library initialized.")
 
 func authenticate() -> Dictionary:
-	lib_log("Starting authentication flow for '%s'." % host)
-
-	var uri_parts := [
+	var uri_with_port: String = ":".join([host, host_port])
+	var complete_uri: String = ""
+	var code_challenge: String = _get_code_challenge(pkce)
+	var uri_query: String = "&".join([
 		"client_id=%s" % client_id,
 		"redirect_uri=http://%s:%s" % [LOCALHOST, port],
-		"response_type=code", # TODO: response_type
-		"scope=openid offline_access", # TODO: scope
+		"response_type=code",
+		"scope=openid offline_access",
 		"response_mode=query",
 		"code_challenge_method=S256",
-		"code_challenge=%s" % _get_code_challenge(pkce),
+		"code_challenge=%s" % code_challenge,
 		"prompt=consent"
-	]
-	# TODO: Deconstruct so that it is easier to read.
-	var uri = ":".join([host, host_port]) + "/oauth/authorize" + "?" + "&".join(uri_parts)
-	OS.shell_open(uri)
+	])
+	lib_log("Starting authentication flow for '%s'." % host)
+	
+	complete_uri = uri_with_port + "/oauth/authorize?" + uri_query
+
+	OS.shell_open(complete_uri)
 
 	redirect_server.listen(port, LOCALHOST)
 	lib_log("Started redirect server.")
