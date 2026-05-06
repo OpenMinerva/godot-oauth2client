@@ -9,9 +9,6 @@
 
 extends RefCounted
 
-# TODO: State CSRF protection
-# TODO: Handle shutdown / dispose?
-
 const LOCALHOST: String = "127.0.0.1"
 var host: String = "" # The server to authenticate with.
 var host_port: int = 0 # The port of the server to authenticate with.
@@ -22,6 +19,7 @@ var http_lib: Variant = null # Optional HTTP library. This is not recommended to
 var redirect_server: TCPServer = TCPServer.new()
 var debug_mode: bool = false # Is this a debugging instance? Logging hides sensitive data by default, when enabled, we display that sensitive data.
 var pkce: String = _random_string() # PKCE is used to generate code_challenges.
+var csrf_state: String = _random_string()
 var tree = Engine.get_main_loop() as SceneTree
 
 # Local files used in serving the callback page.
@@ -64,7 +62,8 @@ func authenticate() -> Dictionary:
 		"response_mode=query",
 		"code_challenge_method=S256",
 		"code_challenge=%s" % code_challenge,
-		"prompt=consent"
+		"prompt=consent",
+		"state=%s" % csrf_state
 	])
 	_lib_log("Starting authentication flow for '%s'." % host)
 	
@@ -163,13 +162,21 @@ func _wait_for_auth_code() -> String:
 
 func _handle_auth_callback(connection: StreamPeerTCP) -> String:
 	_lib_log("Formatting HTTP response.")
+	var _query_params: Dictionary
+	var _auth_code: String
+
 	var request = connection.get_string(connection.get_available_bytes())
+	_query_params = _get_query_params(request)
 
-	# Extract code from URL
-	# FIXME: Not safe auth_code extraction.
-	var temp_auth_code: String = request.split("code=")[1].split("&iss=")[0].strip_edges()
+	# Validate the csrf state
+	if csrf_state != _query_params.get("state"):
+		_lib_log("'State' was different than expected. Someone is probably doing something naughty!")
+		return ""
 
-	_lib_log("Got authentication code: '%s'." % (temp_auth_code if debug_mode else "[HIDDEN]"))
+	# Get the auth code
+	_auth_code = _query_params.get("code")
+
+	_lib_log("Got authentication code: '%s'." % (_auth_code if debug_mode else "[HIDDEN]"))
 
 	# Add the favicon to the page.
 	index_html = index_html.replace('<link rel="icon" type="image/svg" href="logo.svg" />', favicon_html)
@@ -187,7 +194,7 @@ func _handle_auth_callback(connection: StreamPeerTCP) -> String:
 	# Disconnect
 	connection.disconnect_from_host()
 
-	return temp_auth_code
+	return _auth_code
 
 func _exchange_code(code: String) -> Dictionary:
 	_lib_log("Exchanging auth code for tokens.")
@@ -210,7 +217,7 @@ func _exchange_code(code: String) -> Dictionary:
 
 func _get_tokens_from_response(response: Dictionary) -> Dictionary:
 	_lib_log("Formatting response tokens.")
-	# TODO: Error checks to prevent overwriting with bad data.
+
 	var oauth_data = {
 		"access_token" = response.get("access_token"),
 		"refresh_token" = response.get("refresh_token"),
@@ -270,6 +277,22 @@ func _read_local_files() -> void:
 	else:
 		_lib_log("Failed to read the callback page favicon. Ensure that 'logo.webp' favicon is located in the '/openmineerva/oauth2client/page' directory.")
 	return
+
+func _get_query_params(request: String) -> Dictionary:
+	var _url: String = request.split(" ")[1]
+	var _return_object: Dictionary = {}
+	var _regex = RegEx.new()
+	var _regex_search: Array[RegExMatch]
+
+	_regex.compile("([^?&=]+)=([^&]*)")
+	_regex_search = _regex.search_all(_url)
+
+	for _result in _regex_search:
+		var _key = _result.get_string(1)
+		var _value = _result.get_string(2)
+		_return_object.set(_key.uri_decode(), _value.uri_decode())
+
+	return _return_object
 
 func _return_status(state: OAUTH2_CLIENT_RESULT, data: Variant = null) -> Dictionary:
 	return {"ok": state, "data": data}
