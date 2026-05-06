@@ -1,0 +1,37 @@
+body {
+	margin: 0;
+	display: flex;
+	width: 100vw;
+	height: 100vh;
+	font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+.center {
+	margin: auto;
+	min-width: 300px;
+	min-height: 100px;
+	background-color: #eeeeee;
+	border-radius: 10px;
+	border: 1px solid rgb(225, 225, 225);
+
+	.header {
+		background-color: #000000;
+		color: white;
+		border-radius: 10px 10px 0 0;
+		padding: 0.25rem 0.25rem;
+		box-sizing: border-box;
+		text-align: center;
+	}
+
+	.dialog-content {
+		padding: 1rem;
+		box-sizing: border-box;
+		text-align: center;
+	}
+}
+
+.success {
+	.header {
+		background-color: #0077ff;
+	}
+}
