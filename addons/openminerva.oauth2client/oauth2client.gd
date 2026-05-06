@@ -12,27 +12,28 @@ extends RefCounted
 # TODO: State CSRF protection
 # TODO: Handle shutdown / dispose?
 
-var tree = Engine.get_main_loop() as SceneTree
 const LOCALHOST: String = "127.0.0.1"
-var host: String = ""
-var host_port: int = 0
-var client_id: String = ""
-var port: int = 0
-var logger: Variant = null
+var host: String = "" # The server to authenticate with.
+var host_port: int = 0 # The port of the server to authenticate with.
+var client_id: String = "" # The client ID to use that was configured with the server to authenticate with.
+var callback_port: int = 0 # Our port we use to host our callback server.
+var logger: Variant = null # Optional logging library. (Must have ".log()" method!)
+var http_lib: Variant = null # Optional HTTP library. This is not recommended to be changed unless you know what you are doing.
 var redirect_server: TCPServer = TCPServer.new()
-var debug_mode: bool = false
-var pkce: String = _random_string()
-var http_lib: Variant = null
+var debug_mode: bool = false # Is this a debugging instance? Logging hides sensitive data by default, when enabled, we display that sensitive data.
+var pkce: String = _random_string() # PKCE is used to generate code_challenges.
+var tree = Engine.get_main_loop() as SceneTree
 
+# Local files used in serving the callback page.
 var index_html: String = ""
 var css_html: String = ""
 var favicon_html: String = ""
 
-func _init(p_host: String, p_host_port: int, p_client_id: String, p_port: int = 54000, p_logger: Variant = null, p_http_lib: Variant = null, p_debug_mode: bool = false) -> void:
+func _init(p_host: String, p_host_port: int, p_client_id: String, p_callback_port: int = 54000, p_logger: Variant = null, p_http_lib: Variant = null, p_debug_mode: bool = false) -> void:
 	host = p_host
 	host_port = p_host_port
 	client_id = p_client_id
-	port = p_port
+	callback_port = p_callback_port
 	debug_mode = p_debug_mode
 
 	_setup_logger(p_logger)
@@ -47,7 +48,7 @@ func authenticate() -> Dictionary:
 	var code_challenge: String = _get_code_challenge(pkce)
 	var uri_query: String = "&".join([
 		"client_id=%s" % client_id,
-		"redirect_uri=http://%s:%s" % [LOCALHOST, port],
+		"redirect_uri=http://%s:%s" % [LOCALHOST, callback_port],
 		"response_type=code",
 		"scope=openid offline_access",
 		"response_mode=query",
@@ -61,7 +62,7 @@ func authenticate() -> Dictionary:
 
 	OS.shell_open(complete_uri)
 
-	redirect_server.listen(port, LOCALHOST)
+	redirect_server.listen(callback_port, LOCALHOST)
 	lib_log("Started redirect server.")
 
 	var _auth_code = await _wait_for_auth_code()
@@ -179,7 +180,7 @@ func _exchange_code(code: String) -> Dictionary:
 		"client_id=%s" % client_id,
 		"grant_type=authorization_code",
 		"code=%s" % code,
-		"redirect_uri=http://%s:%s" % [LOCALHOST, port],
+		"redirect_uri=http://%s:%s" % [LOCALHOST, callback_port],
 		"code_challenge_method=S256",
 		"code_verifier=%s" % pkce,
 	]
