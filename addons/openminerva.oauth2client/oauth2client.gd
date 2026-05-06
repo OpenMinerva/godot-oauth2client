@@ -29,6 +29,14 @@ var index_html: String = ""
 var css_html: String = ""
 var favicon_html: String = ""
 
+# Enums
+enum OAUTH2_CLIENT_RESULT {
+	OK = 0,
+	UNKNOWN_ERROR = 1,
+	HTTP_REQUEST_FAILED = 2,
+	MISSING_REQUIRED_PARAM = 3
+}
+
 func _init(p_host: String, p_host_port: int, p_client_id: String, p_callback_port: int = 54000, p_logger: Variant = null, p_http_lib: Variant = null, p_debug_mode: bool = false) -> void:
 	host = p_host
 	host_port = p_host_port
@@ -41,6 +49,7 @@ func _init(p_host: String, p_host_port: int, p_client_id: String, p_callback_por
 	_read_local_files()
 
 	_lib_log("OAuth2 library initialized.")
+	return
 
 func authenticate() -> Dictionary:
 	var uri_with_port: String = ":".join([host, host_port])
@@ -71,29 +80,31 @@ func authenticate() -> Dictionary:
 	_lib_log("Closed redirect server.")
 
 	var oauth_data: Dictionary = await _exchange_code(_auth_code)
-	return oauth_data
+	return _return_status(OAUTH2_CLIENT_RESULT.OK, oauth_data)
 
-func validate(oauth_data: Dictionary) -> bool:
+func validate(oauth_data: Dictionary) -> Dictionary:
+	var form: String = ""
+	var introspect_response: Dictionary = {}
+
 	if oauth_data.access_token == "":
 		_lib_log("No access token provided to validate. Returning false.")
-		return false
+		return _return_status(OAUTH2_CLIENT_RESULT.OK, false)
 
-	var form_parts := [
+	form = "&".join([
 		"client_id=%s" % client_id,
 		"token=%s" % oauth_data.access_token,
-	]
-	var form_string: String = "&".join(form_parts)
-	var introspect_response = await http_lib.req(HTTPClient.Method.METHOD_POST, host, "/oauth/token/introspection", host_port, ["Accept: application/json", "Content-Type: application/x-www-form-urlencoded"], form_string)
+	])
+	introspect_response = await http_lib.req(HTTPClient.Method.METHOD_POST, host, "/oauth/token/introspection", host_port, ["Accept: application/json", "Content-Type: application/x-www-form-urlencoded"], form)
 	
 	# TODO: Safe JSON checking / parsing
 	if introspect_response.ok == false:
 		_lib_log("Unknown error parsing the introspection response.")
-		return false
+		return _return_status(OAUTH2_CLIENT_RESULT.HTTP_REQUEST_FAILED)
 
 	# FIXME: No validation of JSON before parsing, causes errors!
 	introspect_response = JSON.parse_string(introspect_response.body)
 	var is_active: bool = introspect_response.active
-	return is_active
+	return _return_status(OAUTH2_CLIENT_RESULT.OK, is_active)
 
 func _lib_log(p_msg: String) -> void:
 	if logger:
@@ -254,3 +265,6 @@ func _read_local_files() -> void:
 	else:
 		_lib_log("Failed to read the callback page favicon. Ensure that 'logo.webp' favicon is located in the '/openmineerva/oauth2client/page' directory.")
 	return
+
+func _return_status(state: OAUTH2_CLIENT_RESULT, data: Variant = null) -> Dictionary:
+	return {"ok": state, "data": data}
