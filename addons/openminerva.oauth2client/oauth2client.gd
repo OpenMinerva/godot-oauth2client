@@ -33,7 +33,8 @@ enum OAUTH2_CLIENT_RESULT {
 	UNKNOWN_ERROR = 1,
 	HTTP_REQUEST_FAILED = 2,
 	MISSING_REQUIRED_PARAM = 3,
-	JSON_PARSE_FAILED = 4
+	JSON_PARSE_FAILED = 4,
+	TIMEOUT = 5
 }
 
 func _init(p_host: String, p_host_port: int, p_client_id: String, p_callback_port: int = 54000, p_logger: Variant = null, p_http_lib: Variant = null, p_debug_mode: bool = false) -> void:
@@ -78,6 +79,9 @@ func authenticate() -> Dictionary:
 
 	redirect_server = TCPServer.new()
 	_lib_log("Closed redirect server.")
+
+	if _auth_code.is_empty():
+		return _return_status(OAUTH2_CLIENT_RESULT.TIMEOUT)
 
 	var oauth_data: Dictionary = await _exchange_code(_auth_code)
 	return _return_status(OAUTH2_CLIENT_RESULT.OK, oauth_data)
@@ -149,16 +153,22 @@ func _base64_to_base64url(input_value: String):
 	return base64_str
 
 func _wait_for_auth_code() -> String:
-	var code: String = ""
+	const RESPONSE_TIMEOUT: int = 60 # Seconds
+	var _auth_code: String = ""
+	var _start_time: float = Time.get_unix_time_from_system()
+	var _execution_time: float = 0
 
-	# FIXME: Indefinite loop risk! 
-	while code == "":
+	while _auth_code == "":
 		if redirect_server.is_connection_available():
-			code = _handle_auth_callback(redirect_server.take_connection())
+			_auth_code = _handle_auth_callback(redirect_server.take_connection())
+		if _execution_time > _start_time + RESPONSE_TIMEOUT:
+			_lib_log("Failed to get an authentication code in time. Stopping the server.")
+			break
 		else:
+			_execution_time = Time.get_unix_time_from_system()
 			await tree.process_frame
 
-	return code
+	return _auth_code
 
 func _handle_auth_callback(connection: StreamPeerTCP) -> String:
 	_lib_log("Formatting HTTP response.")
