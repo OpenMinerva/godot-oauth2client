@@ -1,5 +1,5 @@
 # --- License
-# File: /addons/openminerva.oauth2/wrapper.gd
+# File: /wrapper.gd
 # Project: openminerva.oauth2
 # Created Date: 05 May 2026
 # Copyright (c) 2026 OpenMinerva
@@ -9,7 +9,7 @@
 
 extends Node
 
-const OAuth2ClientInternal = preload("res://addons/openminerva.oauth2client/oauth2client.gd")
+const OAuth2ClientInternal = preload("res://addons/godot-oauth2client/oauth2client.gd")
 
 const OAUTH2_CLIENT_RESULT = OAuth2ClientInternal.OAUTH2_CLIENT_RESULT
 

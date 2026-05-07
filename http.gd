@@ -1,5 +1,5 @@
 # --- License
-# File: /addons/openminerva.oauth2/http.gd
+# File: /http.gd
 # Project: openminerva.oauth2
 # Created Date: 04 May 2026
 # Copyright (c) 2026 OpenMinerva

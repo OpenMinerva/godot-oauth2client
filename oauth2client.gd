@@ -260,14 +260,14 @@ func _setup_http(p_http_lib) -> void:
 		http_lib = p_http_lib
 	else:
 		_lib_log("Using fallback HTTP Library.")
-		http_lib = preload("res://addons/openminerva.oauth2client/http.gd").new()
+		http_lib = preload("res://addons/godot-oauth2client/http.gd").new()
 	return
 
 func _read_local_files() -> void:
 	_lib_log("Reading local files.")
 
 	# Read HTML page.
-	var html = FileAccess.open("res://addons/openminerva.oauth2client/page/index.html", FileAccess.READ)
+	var html = FileAccess.open("res://addons/godot-oauth2client/page/index.html", FileAccess.READ)
 	if html:
 		var content = html.get_as_text()
 		html.close()
@@ -276,7 +276,7 @@ func _read_local_files() -> void:
 		_lib_log("Failed to read the callback page. Ensure the 'index.html' page is located in the '/openmineerva/oauth2client/page' directory.")
 
 	# Read CSS
-	var css = FileAccess.open("res://addons/openminerva.oauth2client/page/index.css", FileAccess.READ)
+	var css = FileAccess.open("res://addons/godot-oauth2client/page/index.css", FileAccess.READ)
 	if css:
 		var content = css.get_as_text()
 		css.close()
@@ -285,7 +285,7 @@ func _read_local_files() -> void:
 		_lib_log("Failed to read the callback page stylesheet. Ensure that 'index.css' stylesheet is located in the '/openmineerva/oauth2client/page' directory.")
 
 	# Read Favicon.
-	var fav_file = FileAccess.open("res://addons/openminerva.oauth2client/page/logo.webp", FileAccess.READ)
+	var fav_file = FileAccess.open("res://addons/godot-oauth2client/page/logo.webp", FileAccess.READ)
 	if fav_file:
 		var buffer = fav_file.get_buffer(fav_file.get_length())
 		fav_file.close()

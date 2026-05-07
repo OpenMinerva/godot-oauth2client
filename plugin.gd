@@ -1,5 +1,5 @@
 # --- License
-# File: /addons/openminerva.oauth2/plugin.gd
+# File: /plugin.gd
 # Project: openminerva.oauth2
 # Created Date: 05 May 2026
 # Copyright (c) 2026 OpenMinerva
@@ -11,7 +11,7 @@
 extends EditorPlugin
 
 const AUTOLOAD_NAME = "OAuth2Client"
-const SCRIPT_PATH = "res://addons/openminerva.oauth2client/wrapper.gd"
+const SCRIPT_PATH = "res://addons/godot-oauth2client/wrapper.gd"
 
 func _enter_tree():
 	add_autoload_singleton(AUTOLOAD_NAME, SCRIPT_PATH)
