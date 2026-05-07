@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://badb0uil6grtw"
-path="res://.godot/imported/logo.webp-55dd520c1040559e1174ec449054bda3.ctex"
+path="res://.godot/imported/logo.webp-689036cd42f303d5c9d2a6dbaedfec00.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://addons/openminerva.oauth2client/page/logo.webp"
-dest_files=["res://.godot/imported/logo.webp-55dd520c1040559e1174ec449054bda3.ctex"]
+source_file="res://addons/godot-oauth2client/page/logo.webp"
+dest_files=["res://.godot/imported/logo.webp-689036cd42f303d5c9d2a6dbaedfec00.ctex"]
 
 [params]
 
